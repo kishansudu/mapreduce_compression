@@ -1,0 +1,91 @@
+Complex Event Pattern Detection over Streams with Interval-Based
+Temporal Semantics
+
+Problem: real-world streaming data is better modeled by "interval events"
+than by "point events", and doing pattern detection here is hard!
+
+Insight: intervals are hard to reason about, but we can just reason
+about their endpoints!
+
+-------------------------------------------------------------------------
+
+what is an interval event?
+- start timestamp e_ts
+- end timestamp e_te
+- event name/type/other data
+
+13 types of interval relationships [Allen]:
+- before/after			e_te < e'ts
+- contains/contained by 	e_ts < e'_ts AND e_te > e'_te
+- touches/touched by 		e_te = e'_ts
+- overlaps/overlapped 		e_ts < e'_ts AND e_te > e'_ts AND e_te < e'_te
+- starts/started by 		e_ts = e'_ts AND e_te < e'_te
+- ends/ended by 		e_ts > e'_ts AND e_te = e'_te
+- equal 			e_ts = e'_ts AND e_te = e'_te
+
+point events:
+- just an interval event where e_ts = e_te
+- querying for sequences simplified
+-- only relations are before, after, and equal
+-- all transitive, unlike interval case
+
+goal: want a sequence operator ISEQ
+- selects an arbitrary sequence of an arbitrary number of events
+- events must occur within a finite time window of length W
+- paper proposes to define the arbitrary sequence using a "TList"
+-- just a conjunction of endpoint relations using <, <=, >, >=, =
+
+-------------------------------------------------------------------------
+
+contributions of the paper:
+
+1) physical implementation of ISEQ:
+- keeps a stack for buffering incoming events that may satisfy the TList
+-- stack-per-event-type?  stack-per-sequence being constructed?  unclear...
+- result tuples constructed on-the-fly as events come in
+- stacks are purged when events fall out of sliding window defined by W
+-- stack purges cascade (ie, if the first event in a sequence is purged, the
+rest is useless)
+- somewhere in here is an NFA for figuring out where we are in the
+sequence... but it's kind of unclear how this works =(
+
+2) "interval begin punctutations"
+- optimization: assumes a more complex event stream
+-- interval beginnings embedded as (name, timestamp)
+-- looks like: (e1, ts) (e2, ts) (e1, ts, te) (e3, ts) ...
+- allows for more agressive stack purging and better optimization of
+joins in result tuple construction
+
+-------------------------------------------------------------------------
+
+experimentation:
+- all done with some sort of simulated event stream, tunable
+by interval length and event density
+- no absolute strawman, performance evaluated only relative to
+the system itself =(
+
+1) tested naive ISEQ vs. ISEQ with basic indexing vs. IBP-ISEQ
+- in both memory consumption and CPU time, ISEQ > indexing > IBP
+- metrics pretty similar for most query types (profiled by percentage
+of index-able interval endpoints, ts vs. te)
+
+2) tested variable query length
+- memory consumption looks to grow linearly
+- CPU may(?) grow exponentially, hard to tell from figure
+
+3) tested varying average interval length
+- both metrics grows with log of interval length
+
+4) tested variable event density
+- memory grows with log of event density
+- CPU grows linearly (I think...)
+
+-------------------------------------------------------------------------
+
+project ideas:
+- ok, I agree with amol, this paper does nothing really special
+-- the approach presented (reasoning about endpoints) seems to be the
+naive and obvious thing to do
+- that being said - I have no idea what we could do differently or better...
+-- unless we could compare their implementation to some other implementation?
+but I'm not sure that there are any...

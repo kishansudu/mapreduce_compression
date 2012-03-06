@@ -1,0 +1,65 @@
+CMSC724 Project Proposal
+
+Compression in Hadoop
+
+Samet Ayhan, Greg Benjamin, Kishan Sudusinghe
+
+University of Maryland, College Park
+
+March 5, 2012
+
+Proposal
+
+Today, we are surrounded by vast amounts of data. We upload/download pictures, videos, text friends
+and family, leave comments around the web, and so forth. In addition to us, machines are generating
+and storing large amounts of data. The exponential growth of data initially presented challenges to
+technology business such as Google, Yahoo, Amazon, Microsoft, etc. They needed to go through this
+large amount of data (in the range of petabytes and even more) to make sense out of it. During this
+timeframe, Google was the first company that publicized MapReduce which allowed them to scale their
+data processing needs. This system aroused a lot of interest due to fact that many similar companies
+were facing the same challenges. [1]
+
+MapReduce is a framework introduced by Google in 2004 to support distributed computing on large
+data sets on geographically dispersed clusters of commodity hardware. Apache Hadoop is an open
+source programming model for writing applications that processes vast amounts of data in parallel.
+Hadoop was inspired by Google’s MapReduce and Google File System.
+
+Within MapReduce programming model, users specify a map function that processes a key/value pair to
+generate a set of intermediate key/value pairs, and a reduce function that merges all intermediate
+values associated with the same intermediate key. Many real world tasks are expressible in this model.
+Programs written in this functional style are automatically parallelized and executed on a large cluster of
+commodity machines. The run-time system takes care of the details of partitioning the input data,
+scheduling the program's execution across a set of machines, handling machine failures, and managing
+the required inter-machine communication. This allows programmers without any experience with
+parallel and distributed systems to easily utilize the resources of a large distributed system. [2]
+
+Although MapReduce provides with tools and utilities to allow programmers to accomplish their parallel
+computing needs of large amounts of data, performance has reportedly been a bottleneck. A 2010
+paper by Michael Stonebraker et al. compared the performance of MapReduce with parallel databases
+and concluded that Hadoop should enable column-storage techniques and operate directly on
+compressed data. [3] In fact, many problems encountered by MapReduce users may be overcome by
+applying techniques learned from over three decades of research on parallel DBMSs. However,
+translating these techniques to a MapReduce implementation such as Hadoop presents unique
+challenges that can lead to new design choices. [4]
+
+Inspired by Floratoru et al., we propose to explore the area of column-oriented storage techniques for
+MapReduce which will investigate implementation of compression techniques. The paper only
+experiments with simple LZO compression, citing a belief that more advanced techniques which provide
+higher compression ratios induce too much overhead and actually harm performance. We plan to test
+
+this claim on a variety of compression techniques, in particular arithmetic coding, which we believe is
+well-suited to this application.
+
+We intend to begin with detailed literature survey, obtain source code from Floratoru et al., on their
+implementation and verify the outcome, if we can, plug in additional compression techniques and
+perform testing. We would welcome any input offered.
+
+[1] Chuck Lam, 2011, Hadoop in Action, Manning
+
+[2] Jeffrey Dean, Sanjay Ghemawat, 2004, Simplified Data Processing on Large Clusters
+
+[3] Michael Stonebraker, Daniel Abadi, David J. Dewitt, Sam Madden, Erik Paulson, Andrew Pavlo, and
+Alexander Rasin, 2010, MapReduce and Parallel DBMSs: Friends or Foes?
+
+[4] Avrilia Floratou, Jignesh M. Patel, Eugene J. Shekita, Sandeep Tata, 2011, Column-oriented Storage
+Techniques for MapReduce

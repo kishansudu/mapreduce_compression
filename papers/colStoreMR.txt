@@ -1,0 +1,89 @@
+Column-Oriented Storage Techniques for MapReduce
+
+Problem: mapReduce has performance problems and often doesn't scale
+with workload as expected.
+
+Insight: techniques from column-stores and parallel dbs can help!
+
+------------------------------------------------------------------------
+
+performance problems in hadoop tend to be related to:
+- complex data types (arrays, maps, nested records)
+- (de)serialization
+-- expensive to go from disk storage to memory and back
+-- especially bad for complex types, but even primatives are costly
+- compression
+-- lowered IO costs, higher CPU costs
+-- tight compression schemes tend to be too CPU costly
+- hand-coded map/reduce functions are naive and unoptimized
+
+contributions of the paper:
+
+new column-oriented input/output format
+- solves column colocation issues using new HDFS block placement policy
+- keeps columns in separate blocks, unlike RCFile
+-- allows for efficient prefetching and minimal IO overhead
+- split sizes need to be large to work (~64MB)
+-- limits parallelism for small data sets
+-- unclear to me why this is necessary though...
+
+lazy deserialization (column-store technique!)
+- curPos tracks current record across all columns, lastPos tracks the last
+deserialized record in each column
+- curPos incremented and nothing deserialized when a record is fetched
+- when a column is fetched, lastPos skips ahead to curPos and data
+is deserialized for that column
+- column files formatted into a "skiplist", with blocks containing pointers
+to skip ahead in chunks of N records
+- if no suitable skip pointers, each record must be deserialized between
+curPos and lastPos
+-- due to variable-length columns (text, blob, etc)
+
+two lazy compression schemes:
+- particular implementations of the skiplist format
+
+1) "compressed blocks"
+- splits column into blocks and compresses each block
+- compressed blocks interleaved with skip headers
+- blocks decompressed if needed, skipped if not!
+- uses standard LZO (looks to be run-length encoding)
+-- low overhead more important than high compression ratio
+
+2) "dictionary compressed skiplists"
+- tailed for map-typed columns
+-- (does the column store maps as records, or is it a column of map keys or
+values?  unclear...)
+- dictionary-compresses (huffman?) the map keys and stores using skiplist
+- lower compression ratio then before, BUT no extra decompression needed to
+get to a value
+
+------------------------------------------------------------------------
+
+experimentation:
+
+1) column-oriented storage using CIF:
+- TXT files vs. binary data (SEQ) -> 3x speedup
+- CIF 1.25x slowdown over SEQ in accessing ALL cols (multiple disk seeks)
+- CIF 2.5x to 95x faster than SEQ in accessing < all cols
+- CIF always faster than RCFile (up to 38x speedup for only 1 col)
+
+2) compression experiments:
+- TXT, SEQ generally real bad here
+- RCFile does better b/c doesn't read all columns (1-4x speedup over SEQ)
+- CIF 60-110x speedup over SEQ (in map phase)
+-- dict-comp does best on all metrics
+-- lzo reads less data than plain skiplist, but is slower (60x vs 80x)
+-- zlib worse than regular CIF (too much CPU overhead)
+-- CIF with CPP 5x faster than CIF w/out CPP (placement policy matters!)
+
+------------------------------------------------------------------------
+
+project ideas:
+- it'd be real easy to repeat this experiment with a bunch of compression
+formats
+-- compare run-length (if sorted?), zlib, lzo, huffman, arithmetic,
+blind dictionary, lzma, etc...
+-- want happy medium between compression rate and speed
+-- want to maintain ability to skip data (block-compress?)
+- could also experiment with block sizes in compressed-block and in skiplist
+
